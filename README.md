@@ -1,4 +1,4 @@
-# Tips2Fix Windows 11 25H2 Premium Installer 🚀
+# Tips2Fix Windows 11 25H2 Installer 🚀
 
 A simple script to install **Windows 11 25H2** on unsupported PCs.  
 Created by **Tips2Fix** in collaboration with ChatGPT.
