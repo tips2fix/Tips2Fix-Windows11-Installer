@@ -391,11 +391,15 @@ try {
     Start-Sleep -Seconds 5  # give Setup time to appear
 
     [System.Windows.Forms.MessageBox]::Show(
-        "Enjoy Windows 11 25H2!`nThanks for using Tips2Fix. We’ll open the Subscribe page now.",
-        "Done - Tips2Fix",
-        [System.Windows.Forms.MessageBoxButtons]::OK,
-        [System.Windows.Forms.MessageBoxIcon]::Information
-    ) | Out-Null
+    ("Enjoy Windows 11 25H2!" + [Environment]::NewLine +
+     "Thanks for using Tips2Fix." + [Environment]::NewLine +
+     "A new browser window with Tips2Fix YouTube will pop up. Please click Subscribe on the confirmation dialog." + [Environment]::NewLine +
+     "Thank you for subscribing - God loves you and may God bless you!"),
+    "Done - Tips2Fix",
+    [System.Windows.Forms.MessageBoxButtons]::OK,
+    [System.Windows.Forms.MessageBoxIcon]::Information
+) | Out-Null
+
 
     try {
         Open-Url-NewWindow -Url $SubscribeUrl
