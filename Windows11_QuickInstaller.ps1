@@ -8,9 +8,9 @@ Add-Type -AssemblyName System.Windows.Forms
 Add-Type -AssemblyName System.Drawing
 
 $ErrorActionPreference = 'Stop'
-$AutoContinue = $false   # set to $true to auto-continue intro after 5 seconds
-$SubscribeUrl = 'https://www.youtube.com/channel/UC3kEO7SEulVV__uGbbumQog?sub_confirmation=1'
-$QuietCopyLogs = $true   # hide noisy robocopy attempt lines in console log
+$AutoContinue   = $false     # set to $true to auto-continue intro after 5 seconds
+$SubscribeUrl   = 'https://www.youtube.com/channel/UC3kEO7SEulVV__uGbbumQog?sub_confirmation=1'
+$QuietCopyLogs  = $true       # hide noisy robocopy attempt lines in console log
 
 $desktop     = [Environment]::GetFolderPath("Desktop")
 $logPath     = Join-Path $desktop "Tips2Fix_W11_install_log.txt"
@@ -104,6 +104,141 @@ if (-not ([Security.Principal.WindowsPrincipal] [Security.Principal.WindowsIdent
 "Tips2Fix Windows 11 Installer Log" | Out-File -FilePath $logPath -Force -Encoding UTF8
 Log "Script started."
 
+# ---- CPU feature detector (POPCNT & SSE4.2) ----
+function Get-CPUFeatures {
+    # Only check when running in 64-bit PowerShell (the inline machine code is x64)
+    if ($env:PROCESSOR_ARCHITECTURE -ne 'AMD64') {
+        return $null  # skip check on non-x64 sessions
+    }
+
+    $cpuHelperSource = @"
+using System;
+using System.Runtime.InteropServices;
+
+public static class CpuFeature
+{
+    [UnmanagedFunctionPointer(CallingConvention.Cdecl)]
+    private delegate uint Cpuid1EcxDelegate();
+
+    [DllImport("kernel32", SetLastError=true)]
+    static extern IntPtr VirtualAlloc(IntPtr lpAddress, UIntPtr dwSize, uint flAllocationType, uint flProtect);
+
+    [DllImport("kernel32", SetLastError=true)]
+    static extern bool VirtualFree(IntPtr lpAddress, UIntPtr dwSize, uint dwFreeType);
+
+    const uint MEM_COMMIT  = 0x1000;
+    const uint MEM_RESERVE = 0x2000;
+    const uint PAGE_EXECUTE_READWRITE = 0x40;
+    const uint MEM_RELEASE = 0x8000;
+
+    // Returns CPUID leaf 1 ECX (feature bits)
+    public static uint GetCpuid1Ecx()
+    {
+        // x64 machine code:
+        // push rbx
+        // mov  eax, 1
+        // cpuid
+        // mov  eax, ecx
+        // pop  rbx
+        // ret
+        byte[] code = new byte[] {
+            0x53,
+            0xB8, 0x01,0x00,0x00,0x00,
+            0x0F, 0xA2,
+            0x89, 0xC8,
+            0x5B,
+            0xC3
+        };
+
+        IntPtr mem = VirtualAlloc(IntPtr.Zero, (UIntPtr)code.Length, MEM_COMMIT | MEM_RESERVE, PAGE_EXECUTE_READWRITE);
+        if (mem == IntPtr.Zero) throw new Exception("VirtualAlloc failed");
+        Marshal.Copy(code, 0, mem, code.Length);
+        var del = (Cpuid1EcxDelegate)Marshal.GetDelegateForFunctionPointer(mem, typeof(Cpuid1EcxDelegate));
+        uint ecx = del();
+        VirtualFree(mem, UIntPtr.Zero, MEM_RELEASE);
+        return ecx;
+    }
+
+    public static bool HasSse42()  { return ((GetCpuid1Ecx() >> 20) & 1) == 1; } // ECX bit 20
+    public static bool HasPopcnt() { return ((GetCpuid1Ecx() >> 23) & 1) == 1; } // ECX bit 23
+}
+"@
+
+    # Compile once
+    $loaded = [AppDomain]::CurrentDomain.GetAssemblies() |
+              ForEach-Object { $_.GetTypes() } |
+              Where-Object { $_.FullName -eq 'CpuFeature' }
+    if (-not $loaded) {
+        Add-Type -TypeDefinition $cpuHelperSource -Language CSharp -ErrorAction Stop
+    }
+
+    # Return a simple object
+    [pscustomobject]@{
+        SSE42  = [CpuFeature]::HasSse42()
+        POPCNT = [CpuFeature]::HasPopcnt()
+    }
+}
+
+function Show-CPUCheckDialog {
+    param(
+        [bool]$HasSSE42,
+        [bool]$HasPOPCNT
+    )
+
+    $form = New-Object System.Windows.Forms.Form
+    $form.Text = "CPU feature check"
+    $form.StartPosition   = "CenterScreen"
+    $form.FormBorderStyle = 'FixedDialog'
+    $form.MinimizeBox     = $false
+    $form.MaximizeBox     = $false
+    $form.TopMost         = $true
+    $form.Font            = New-Object System.Drawing.Font("Segoe UI", 11)
+    $form.ClientSize      = New-Object System.Drawing.Size(430,190)
+
+    $title = New-Object System.Windows.Forms.Label
+    $title.Text = "CPU feature check:"
+    $title.Font = New-Object System.Drawing.Font("Segoe UI", 12, [System.Drawing.FontStyle]::Bold)
+    $title.AutoSize = $true
+    $title.Location = New-Object System.Drawing.Point(14,14)
+
+    $lblSSE = New-Object System.Windows.Forms.Label
+    $lblSSE.AutoSize = $true
+    $lblSSE.Font = New-Object System.Drawing.Font("Segoe UI", 11, [System.Drawing.FontStyle]::Bold)
+    $lblSSE.Location = New-Object System.Drawing.Point(14,48)
+    $lblSSE.Text = "SSE4.2 : " + ($(if($HasSSE42){"SUPPORTED"} else {"NOT SUPPORTED"}))
+    $lblSSE.ForeColor = if ($HasSSE42) { [System.Drawing.Color]::ForestGreen } else { [System.Drawing.Color]::Firebrick }
+
+    $lblPOPCNT = New-Object System.Windows.Forms.Label
+    $lblPOPCNT.AutoSize = $true
+    $lblPOPCNT.Font = New-Object System.Drawing.Font("Segoe UI", 11, [System.Drawing.FontStyle]::Bold)
+    $lblPOPCNT.Location = New-Object System.Drawing.Point(14,76)
+    $lblPOPCNT.Text = "POPCNT : " + ($(if($HasPOPCNT){"SUPPORTED"} else {"NOT SUPPORTED"}))
+    $lblPOPCNT.ForeColor = if ($HasPOPCNT) { [System.Drawing.Color]::ForestGreen } else { [System.Drawing.Color]::Firebrick }
+
+    $question = New-Object System.Windows.Forms.Label
+    $question.AutoSize = $true
+    $question.Location = New-Object System.Drawing.Point(14,112)
+    $question.Text = "Do you want to continue?"
+
+    $btnYes = New-Object System.Windows.Forms.Button
+    $btnYes.Text = "Yes"
+    $btnYes.Size = New-Object System.Drawing.Size(100,34)
+    $btnYes.Location = New-Object System.Drawing.Point(200,140)
+    $btnYes.Add_Click({ $form.DialogResult = [System.Windows.Forms.DialogResult]::Yes; $form.Close() })
+
+    $btnNo = New-Object System.Windows.Forms.Button
+    $btnNo.Text = "No"
+    $btnNo.Size = New-Object System.Drawing.Size(100,34)
+    $btnNo.Location = New-Object System.Drawing.Point(310,140)
+    $btnNo.Add_Click({ $form.DialogResult = [System.Windows.Forms.DialogResult]::No; $form.Close() })
+
+    $form.AcceptButton = $btnYes
+    $form.CancelButton = $btnNo
+
+    $form.Controls.AddRange(@($title,$lblSSE,$lblPOPCNT,$question,$btnYes,$btnNo))
+    return $form.ShowDialog()
+}
+
 try {
     # ---- Intro ----
     $form = New-Object System.Windows.Forms.Form
@@ -113,8 +248,9 @@ try {
     $form.MinimizeBox     = $false
     $form.MaximizeBox     = $false
     $form.AutoScaleMode   = 'Dpi'
-    $form.MinimumSize     = New-Object System.Drawing.Size(600,150)
-    $form.Padding         = New-Object System.Windows.Forms.Padding(8)
+    $form.MinimumSize     = New-Object System.Drawing.Size(720,190)
+    $form.Padding         = New-Object System.Windows.Forms.Padding(10)
+    $form.Font            = New-Object System.Drawing.Font("Segoe UI", 12)
 
     $grid = New-Object System.Windows.Forms.TableLayoutPanel
     $grid.Dock = 'Fill'; $grid.RowCount = 3; $grid.ColumnCount = 2
@@ -124,7 +260,7 @@ try {
 
     $title = New-Object System.Windows.Forms.Label
     $title.Text = "Tips2Fix - Windows 11 25H2 Installer"
-    $title.Font = New-Object System.Drawing.Font("Segoe UI", 11, [System.Drawing.FontStyle]::Bold)
+    $title.Font = New-Object System.Drawing.Font("Segoe UI", 14, [System.Drawing.FontStyle]::Bold)
     $title.ForeColor = [System.Drawing.Color]::FromArgb(255,140,0)
     $title.AutoSize = $true
     $title.Margin   = New-Object System.Windows.Forms.Padding(6,6,6,2)
@@ -133,9 +269,9 @@ try {
 
     $sub = New-Object System.Windows.Forms.Label
     $sub.Text = "Backup your files first! Installing on unsupported hardware is risky."
-    $sub.Font = New-Object System.Drawing.Font("Segoe UI", 9)
+    $sub.Font = New-Object System.Drawing.Font("Segoe UI", 11)
     $sub.AutoSize = $true
-    $sub.Margin   = New-Object System.Windows.Forms.Padding(6,0,6,6)
+    $sub.Margin   = New-Object System.Windows.Forms.Padding(6,0,6,8)
     $grid.Controls.Add($sub, 0, 1)
     $grid.SetColumnSpan($sub, 2)
 
@@ -145,7 +281,7 @@ try {
 
     $btn = New-Object System.Windows.Forms.Button
     $btn.Text = "Continue"
-    $btn.Width = 120; $btn.Height = 32
+    $btn.Width = 140; $btn.Height = 40
     $btn.DialogResult = [System.Windows.Forms.DialogResult]::OK
     $btn.Anchor = 'Right'
     $btn.Margin = New-Object System.Windows.Forms.Padding(6)
@@ -179,7 +315,19 @@ try {
     if ($res -ne [System.Windows.Forms.DialogResult]::OK) { throw "User cancelled at intro." }
     Log "Intro accepted."
 
-    # ---- Mode selection ----
+    # ---- CPU feature check (POPCNT & SSE4.2) with styled dialog ----
+    $features = Get-CPUFeatures
+    if ($features -ne $null) {
+        Log ("CPU features: SSE4.2={0} POPCNT={1}" -f $features.SSE42, $features.POPCNT)
+        $resp = Show-CPUCheckDialog -HasSSE42:$features.SSE42 -HasPOPCNT:$features.POPCNT
+        if ($resp -ne [System.Windows.Forms.DialogResult]::Yes) {
+            throw "User cancelled after CPU feature check."
+        }
+    } else {
+        Log "CPU feature check skipped (session is not x64)."
+    }
+
+    # ---- Mode selection (bigger font, no extra-args) ----
     $modeForm = New-Object System.Windows.Forms.Form
     $modeForm.Text = "Select installation mode"
     $modeForm.StartPosition   = "CenterScreen"
@@ -187,29 +335,29 @@ try {
     $modeForm.MinimizeBox     = $false
     $modeForm.MaximizeBox     = $false
     $modeForm.AutoScaleMode   = 'Dpi'
-    $modeForm.MinimumSize     = New-Object System.Drawing.Size(640,260)
-    $modeForm.Padding         = New-Object System.Windows.Forms.Padding(8)
+    $modeForm.MinimumSize     = New-Object System.Drawing.Size(760,280)
+    $modeForm.Padding         = New-Object System.Windows.Forms.Padding(10)
+    $modeForm.Font            = New-Object System.Drawing.Font("Segoe UI", 12)
 
     $tbl = New-Object System.Windows.Forms.TableLayoutPanel
-    $tbl.Dock = 'Fill'; $tbl.RowCount = 6; $tbl.ColumnCount = 1; $tbl.AutoSize = $true
+    $tbl.Dock = 'Fill'; $tbl.RowCount = 5; $tbl.ColumnCount = 1; $tbl.AutoSize = $true
 
-    $rb1 = New-Object System.Windows.Forms.RadioButton; $rb1.Text = "1) Fast install / upgrade (no registry edits)"; $rb1.Checked = $true; $rb1.AutoSize = $true
-    $rb2 = New-Object System.Windows.Forms.RadioButton; $rb2.Text = "2) Advanced install (apply bypass registry keys)"; $rb2.AutoSize = $true
-    $rb3 = New-Object System.Windows.Forms.RadioButton; $rb3.Text = "3) Reset registry keys to original (remove bypass)"; $rb3.AutoSize = $true
+    $rb1 = New-Object System.Windows.Forms.RadioButton
+    $rb1.Text = "1) Fast install / upgrade (no registry edits)"
+    $rb1.Checked = $true; $rb1.AutoSize = $true
+
+    $rb2 = New-Object System.Windows.Forms.RadioButton
+    $rb2.Text = "2) Advanced install (apply bypass registry keys)"
+    $rb2.AutoSize = $true
+
+    $rb3 = New-Object System.Windows.Forms.RadioButton
+    $rb3.Text = "3) Reset registry keys to original (remove bypass)"
+    $rb3.AutoSize = $true
 
     $tbl.Controls.Add($rb1); $tbl.Controls.Add($rb2); $tbl.Controls.Add($rb3)
 
-    $argLabel = New-Object System.Windows.Forms.Label
-    $argLabel.Text = "Extra installer args (optional, e.g. /Compat IgnoreWarning)"
-    $argLabel.AutoSize = $true
-    $tbl.Controls.Add($argLabel)
-
-    $argBox = New-Object System.Windows.Forms.TextBox
-    $argBox.Width = 560
-    $tbl.Controls.Add($argBox)
-
     $ok = New-Object System.Windows.Forms.Button
-    $ok.Text = "OK"; $ok.Width = 100; $ok.DialogResult = [System.Windows.Forms.DialogResult]::OK
+    $ok.Text = "OK"; $ok.Width = 140; $ok.Height = 40; $ok.DialogResult = [System.Windows.Forms.DialogResult]::OK
     $tbl.Controls.Add($ok)
 
     $modeForm.Controls.Add($tbl)
@@ -219,9 +367,7 @@ try {
     if ($modeRes -ne [System.Windows.Forms.DialogResult]::OK) { throw "User cancelled at mode selection." }
 
     $selectedMode = if ($rb2.Checked) { "advanced" } elseif ($rb3.Checked) { "reset" } else { "fast" }
-    $extraArgs = $argBox.Text.Trim()
     Log "Mode: $selectedMode"
-    if ($extraArgs) { Log "Extra args: $extraArgs" }
 
     # ---- ISO picker ----
     $ofd = New-Object System.Windows.Forms.OpenFileDialog
@@ -261,10 +407,11 @@ try {
     # ---- Progress UI ----
     $progForm = New-Object System.Windows.Forms.Form
     $progForm.Text = "Extracting files..."
-    $progForm.Width = 520; $progForm.Height = 140; $progForm.StartPosition = "CenterScreen"
+    $progForm.Width = 560; $progForm.Height = 170; $progForm.StartPosition = "CenterScreen"
+    $progForm.Font  = New-Object System.Drawing.Font("Segoe UI", 11)
 
     $bar = New-Object System.Windows.Forms.ProgressBar
-    $bar.Location = New-Object System.Drawing.Point(10,20); $bar.Width = 480
+    $bar.Location = New-Object System.Drawing.Point(10,20); $bar.Width = 520
     $bar.Minimum = 0; $bar.Maximum = 100
     $progForm.Controls.Add($bar)
 
@@ -382,8 +529,7 @@ try {
 
     # ---- Launch Windows Setup (non-blocking), then 5s later show message + open subscribe in NEW browser window ----
     if (Test-Path $setupPrep) { $exe = $setupPrep } else { $exe = $setupExe }
-    $args = "/product server"
-    if ($extraArgs) { $args = "$args $extraArgs" }
+    $args = "/product server"     # <— extraArgs removed intentionally
 
     Log "Launching: $exe $args"
     Start-Process -FilePath $exe -ArgumentList $args -Verb RunAs  # do NOT wait
@@ -391,15 +537,14 @@ try {
     Start-Sleep -Seconds 5  # give Setup time to appear
 
     [System.Windows.Forms.MessageBox]::Show(
-    ("Enjoy Windows 11 25H2!" + [Environment]::NewLine +
-     "Thanks for using Tips2Fix." + [Environment]::NewLine +
-     "A new browser window with Tips2Fix YouTube will pop up. Please click Subscribe on the confirmation dialog." + [Environment]::NewLine +
-     "Thank you for subscribing - God loves you and may God bless you!"),
-    "Done - Tips2Fix",
-    [System.Windows.Forms.MessageBoxButtons]::OK,
-    [System.Windows.Forms.MessageBoxIcon]::Information
-) | Out-Null
-
+        ("Enjoy Windows 11 25H2!" + [Environment]::NewLine +
+         "Thanks for using Tips2Fix." + [Environment]::NewLine +
+         "A new browser window with Tips2Fix YouTube will pop up. Please click Subscribe on the confirmation dialog." + [Environment]::NewLine +
+         "Thank you for subscribing - God loves you and may God bless you!"),
+        "Done - Tips2Fix",
+        [System.Windows.Forms.MessageBoxButtons]::OK,
+        [System.Windows.Forms.MessageBoxIcon]::Information
+    ) | Out-Null
 
     try {
         Open-Url-NewWindow -Url $SubscribeUrl
