@@ -33,3 +33,7 @@ Created by **Tips2Fix** in collaboration with ChatGPT.
 ## Subscribe ❤️
 If this script helped, don’t forget to subscribe:  
 👉 [Tips2Fix YouTube Channel](https://youtube.com/@tips2fix)
+
+
+![GitHub release (latest)](https://img.shields.io/github/v/release/tips2fix/Tips2Fix-Windows11-Installer)
+![GitHub repo size](https://img.shields.io/github/repo-size/tips2fix/Tips2Fix-Windows11-Installer)
