@@ -1,6 +1,9 @@
 @echo off
-REM Tips2Fix + ChatGPT - Windows 11 25H2 Installer
-REM Double-click this file. It will request elevation and run the PowerShell script.
+echo ===============================================
+echo   Tips2Fix Windows 11 25H2 Installer
+echo   Created in collaboration with ChatGPT
+echo ===============================================
+echo.
 
 set SCRIPT=Windows11_QuickInstaller.ps1
 
