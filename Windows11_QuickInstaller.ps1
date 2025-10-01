@@ -1,5 +1,5 @@
 <#
-Tips2Fix + ChatGPT
+Tips2Fix
 Windows 11 25H2 Quick Installer
 All-in-one PowerShell script (PS 5.1 compatible)
 #>
@@ -123,7 +123,7 @@ try {
     $grid.AutoSize = $true
 
     $title = New-Object System.Windows.Forms.Label
-    $title.Text = "Tips2Fix + ChatGPT - Windows 11 25H2 Installer"
+    $title.Text = "Tips2Fix - Windows 11 25H2 Installer"
     $title.Font = New-Object System.Drawing.Font("Segoe UI", 11, [System.Drawing.FontStyle]::Bold)
     $title.ForeColor = [System.Drawing.Color]::FromArgb(255,140,0)
     $title.AutoSize = $true
