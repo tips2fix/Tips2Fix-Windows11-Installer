@@ -1,209 +1,422 @@
 <#
 Tips2Fix + ChatGPT
-Windows 11 25H2 Premium Quick Installer
-All-in-one PowerShell script (ready for PS2EXE packaging)
+Windows 11 25H2 Quick Installer
+All-in-one PowerShell script (PS 5.1 compatible)
 #>
 
 Add-Type -AssemblyName System.Windows.Forms
 Add-Type -AssemblyName System.Drawing
 
-$desktop = [Environment]::GetFolderPath("Desktop")
-$logPath = Join-Path $desktop "Tips2Fix_W11_install_log.txt"
-$ScriptStart = Get-Date
+$ErrorActionPreference = 'Stop'
+$AutoContinue = $false   # set to $true to auto-continue intro after 5 seconds
+$SubscribeUrl = 'https://www.youtube.com/channel/UC3kEO7SEulVV__uGbbumQog?sub_confirmation=1'
+$QuietCopyLogs = $true   # hide noisy robocopy attempt lines in console log
 
-function Log { 
-    param($msg)
+$desktop     = [Environment]::GetFolderPath("Desktop")
+$logPath     = Join-Path $desktop "Tips2Fix_W11_install_log.txt"
+$scriptStart = Get-Date
+
+function Log {
+    param([string]$msg)
     $t = (Get-Date).ToString("yyyy-MM-dd HH:mm:ss")
     $line = "[$t] $msg"
     $line | Out-File -FilePath $logPath -Append -Encoding UTF8
     Write-Host $line
 }
 
-# --- Elevation check ---
-if (-not ([Security.Principal.WindowsPrincipal] [Security.Principal.WindowsIdentity]::GetCurrent()).IsInRole([Security.Principal.WindowsBuiltInRole] "Administrator")) {
-    $psi = New-Object System.Diagnostics.ProcessStartInfo "PowerShell";
-    $psi.Arguments = "-NoProfile -ExecutionPolicy Bypass -File `"$PSCommandPath`"";
-    $psi.Verb = "runas";
-    try { [System.Diagnostics.Process]::Start($psi) } catch { exit }
+function Open-Url-NewWindow {
+    param([Parameter(Mandatory)][string]$Url)
+
+    # Try to detect default browser ProgId
+    $progId = (Get-ItemProperty 'HKCU:\Software\Microsoft\Windows\Shell\Associations\UrlAssociations\http\UserChoice' -ErrorAction SilentlyContinue).ProgId
+
+    # Build candidates (force NEW WINDOW)
+    $candidates = @()
+
+    if ($progId -match 'Chrome') {
+        $candidates += @(
+          @{Path="$env:ProgramFiles\Google\Chrome\Application\chrome.exe"; Args=@('--new-window', $Url)},
+          @{Path="$env:ProgramFiles(x86)\Google\Chrome\Application\chrome.exe"; Args=@('--new-window', $Url)}
+        )
+    } elseif ($progId -match 'MSEdge') {
+        $candidates += @(
+          @{Path="$env:ProgramFiles\Microsoft\Edge\Application\msedge.exe"; Args=@('--new-window', $Url)},
+          @{Path="$env:ProgramFiles(x86)\Microsoft\Edge\Application\msedge.exe"; Args=@('--new-window', $Url)}
+        )
+    } elseif ($progId -match 'Firefox') {
+        $candidates += @(
+          @{Path="$env:ProgramFiles\Mozilla Firefox\firefox.exe"; Args=@('-new-window', $Url)},
+          @{Path="$env:ProgramFiles(x86)\Mozilla Firefox\firefox.exe"; Args=@('-new-window', $Url)}
+        )
+    } elseif ($progId -match 'Brave') {
+        $candidates += @(
+          @{Path="$env:ProgramFiles\BraveSoftware\Brave-Browser\Application\brave.exe"; Args=@('--new-window', $Url)},
+          @{Path="$env:ProgramFiles(x86)\BraveSoftware\Brave-Browser\Application\brave.exe"; Args=@('--new-window', $Url)}
+        )
+    } elseif ($progId -match 'Opera') {
+        $candidates += @(
+          @{Path="$env:ProgramFiles\Opera\launcher.exe"; Args=@('--new-window', $Url)},
+          @{Path="$env:ProgramFiles(x86)\Opera\launcher.exe"; Args=@('--new-window', $Url)}
+        )
+    } elseif ($progId -match 'Vivaldi') {
+        $candidates += @(
+          @{Path="$env:ProgramFiles\Vivaldi\Application\vivaldi.exe"; Args=@('--new-window', $Url)},
+          @{Path="$env:ProgramFiles(x86)\Vivaldi\Application\vivaldi.exe"; Args=@('--new-window', $Url)}
+        )
+    }
+
+    # Generic fallbacks
+    $candidates += @(
+      @{Path="$env:ProgramFiles\Google\Chrome\Application\chrome.exe"; Args=@('--new-window', $Url)},
+      @{Path="$env:ProgramFiles(x86)\Google\Chrome\Application\chrome.exe"; Args=@('--new-window', $Url)},
+      @{Path="$env:ProgramFiles\Microsoft\Edge\Application\msedge.exe"; Args=@('--new-window', $Url)},
+      @{Path="$env:ProgramFiles(x86)\Microsoft\Edge\Application\msedge.exe"; Args=@('--new-window', $Url)},
+      @{Path="$env:ProgramFiles\Mozilla Firefox\firefox.exe"; Args=@('-new-window', $Url)}
+    )
+
+    foreach ($c in $candidates) {
+        if (Test-Path $c.Path) {
+            try {
+                Start-Process -FilePath $c.Path -ArgumentList $c.Args -ErrorAction Stop | Out-Null
+                return
+            } catch { }
+        }
+    }
+
+    # Last resort: default handler (may open a tab)
+    Start-Process $Url | Out-Null
+}
+
+# Elevate if needed (safety net; the .bat already elevates)
+if (-not ([Security.Principal.WindowsPrincipal] [Security.Principal.WindowsIdentity]::GetCurrent()
+    ).IsInRole([Security.Principal.WindowsBuiltInRole] "Administrator")) {
+    $psi = New-Object System.Diagnostics.ProcessStartInfo "PowerShell"
+    $psi.Arguments = "-NoProfile -ExecutionPolicy Bypass -File `"$PSCommandPath`""
+    $psi.Verb      = "runas"
+    try { [System.Diagnostics.Process]::Start($psi) | Out-Null } catch {
+        Write-Host "Elevation failed: $_"
+        Read-Host "Press Enter to exit..."
+        exit
+    }
     exit
 }
 
-"Tips2Fix Windows11 Installer Log" | Out-File -FilePath $logPath -Force -Encoding UTF8
+"Tips2Fix Windows 11 Installer Log" | Out-File -FilePath $logPath -Force -Encoding UTF8
 Log "Script started."
 
-# --- Intro Form ---
-$form = New-Object System.Windows.Forms.Form
-$form.Text = "Tips2Fix — Windows 11 25H2 Installer"
-$form.Width = 640
-$form.Height = 120
-$form.StartPosition = "CenterScreen"
+try {
+    # ---- Intro ----
+    $form = New-Object System.Windows.Forms.Form
+    $form.Text = "Tips2Fix - Windows 11 25H2 Installer"
+    $form.StartPosition   = "CenterScreen"
+    $form.FormBorderStyle = [System.Windows.Forms.FormBorderStyle]::FixedDialog
+    $form.MinimizeBox     = $false
+    $form.MaximizeBox     = $false
+    $form.AutoScaleMode   = 'Dpi'
+    $form.MinimumSize     = New-Object System.Drawing.Size(600,150)
+    $form.Padding         = New-Object System.Windows.Forms.Padding(8)
 
-$lbl = New-Object System.Windows.Forms.Label
-$lbl.Text = "Tips2Fix + ChatGPT — Windows 11 25H2 Premium Installer"
-$lbl.Font = New-Object System.Drawing.Font("Segoe UI",11,[System.Drawing.FontStyle]::Bold)
-$lbl.AutoSize = $true
-$lbl.ForeColor = [System.Drawing.Color]::FromArgb(255,140,0) # orange
-$lbl.Location = New-Object System.Drawing.Point(10,10)
-$form.Controls.Add($lbl)
+    $grid = New-Object System.Windows.Forms.TableLayoutPanel
+    $grid.Dock = 'Fill'; $grid.RowCount = 3; $grid.ColumnCount = 2
+    $grid.ColumnStyles.Add((New-Object System.Windows.Forms.ColumnStyle([System.Windows.Forms.SizeType]::Percent,80)))
+    $grid.ColumnStyles.Add((New-Object System.Windows.Forms.ColumnStyle([System.Windows.Forms.SizeType]::Percent,20)))
+    $grid.AutoSize = $true
 
-$sub = New-Object System.Windows.Forms.Label
-$sub.Text = "Backup your files first! Installing on unsupported hardware is risky."
-$sub.Font = New-Object System.Drawing.Font("Segoe UI",9)
-$sub.AutoSize = $true
-$sub.Location = New-Object System.Drawing.Point(10,40)
-$form.Controls.Add($sub)
+    $title = New-Object System.Windows.Forms.Label
+    $title.Text = "Tips2Fix + ChatGPT - Windows 11 25H2 Installer"
+    $title.Font = New-Object System.Drawing.Font("Segoe UI", 11, [System.Drawing.FontStyle]::Bold)
+    $title.ForeColor = [System.Drawing.Color]::FromArgb(255,140,0)
+    $title.AutoSize = $true
+    $title.Margin   = New-Object System.Windows.Forms.Padding(6,6,6,2)
+    $grid.Controls.Add($title, 0, 0)
+    $grid.SetColumnSpan($title, 2)
 
-$btn = New-Object System.Windows.Forms.Button
-$btn.Text = "Continue"
-$btn.Width = 100
-$btn.Location = New-Object System.Drawing.Point(520,60)
-$btn.Add_Click({ $form.Tag = "ok"; $form.Close() })
-$form.Topmost = $true
-$form.ShowDialog() | Out-Null
-if ($form.Tag -ne "ok") { exit }
+    $sub = New-Object System.Windows.Forms.Label
+    $sub.Text = "Backup your files first! Installing on unsupported hardware is risky."
+    $sub.Font = New-Object System.Drawing.Font("Segoe UI", 9)
+    $sub.AutoSize = $true
+    $sub.Margin   = New-Object System.Windows.Forms.Padding(6,0,6,6)
+    $grid.Controls.Add($sub, 0, 1)
+    $grid.SetColumnSpan($sub, 2)
 
-# --- Mode Selection ---
-$modeForm = New-Object System.Windows.Forms.Form
-$modeForm.Text = "Select installation mode"
-$modeForm.Width = 680
-$modeForm.Height = 260
-$modeForm.StartPosition = "CenterScreen"
+    $leftSpacer = New-Object System.Windows.Forms.Label
+    $leftSpacer.Text = ""; $leftSpacer.AutoSize = $true
+    $grid.Controls.Add($leftSpacer, 0, 2)
 
-$rb1 = New-Object System.Windows.Forms.RadioButton
-$rb1.Text = "1) Fast install / upgrade (no registry edits)"
-$rb1.Location = New-Object System.Drawing.Point(20,20)
-$rb1.Checked = $true
-$modeForm.Controls.Add($rb1)
+    $btn = New-Object System.Windows.Forms.Button
+    $btn.Text = "Continue"
+    $btn.Width = 120; $btn.Height = 32
+    $btn.DialogResult = [System.Windows.Forms.DialogResult]::OK
+    $btn.Anchor = 'Right'
+    $btn.Margin = New-Object System.Windows.Forms.Padding(6)
+    $grid.Controls.Add($btn, 1, 2)
 
-$rb2 = New-Object System.Windows.Forms.RadioButton
-$rb2.Text = "2) Advanced install (apply bypass registry keys)"
-$rb2.Location = New-Object System.Drawing.Point(20,50)
-$modeForm.Controls.Add($rb2)
+    if ($AutoContinue) {
+        $timer = New-Object System.Windows.Forms.Timer
+        $timer.Interval = 1000
+        $sec = 5
+        $countLbl = New-Object System.Windows.Forms.Label
+        $countLbl.Text = "Auto-continue in $sec..."
+        $countLbl.AutoSize = $true
+        $grid.Controls.Add($countLbl, 0, 2)
+        $timer.Add_Tick({
+            $script:sec -= 1
+            if ($script:sec -le 0) {
+                $timer.Stop()
+                $form.DialogResult = [System.Windows.Forms.DialogResult]::OK
+                $form.Close()
+            } else {
+                $countLbl.Text = "Auto-continue in $script:sec..."
+            }
+        })
+        $timer.Start()
+    }
 
-$rb3 = New-Object System.Windows.Forms.RadioButton
-$rb3.Text = "3) Reset registry keys to original (remove bypass)"
-$rb3.Location = New-Object System.Drawing.Point(20,80)
-$modeForm.Controls.Add($rb3)
+    $form.Controls.Add($grid)
+    $form.AcceptButton = $btn
+    $form.Topmost = $true
+    $res = $form.ShowDialog()
+    if ($res -ne [System.Windows.Forms.DialogResult]::OK) { throw "User cancelled at intro." }
+    Log "Intro accepted."
 
-$argLabel = New-Object System.Windows.Forms.Label
-$argLabel.Text = "Extra installer args (optional, e.g. /Compat IgnoreWarning)"
-$argLabel.Location = New-Object System.Drawing.Point(20,120)
-$argLabel.AutoSize = $true
-$modeForm.Controls.Add($argLabel)
+    # ---- Mode selection ----
+    $modeForm = New-Object System.Windows.Forms.Form
+    $modeForm.Text = "Select installation mode"
+    $modeForm.StartPosition   = "CenterScreen"
+    $modeForm.FormBorderStyle = [System.Windows.Forms.FormBorderStyle]::FixedDialog
+    $modeForm.MinimizeBox     = $false
+    $modeForm.MaximizeBox     = $false
+    $modeForm.AutoScaleMode   = 'Dpi'
+    $modeForm.MinimumSize     = New-Object System.Drawing.Size(640,260)
+    $modeForm.Padding         = New-Object System.Windows.Forms.Padding(8)
 
-$argBox = New-Object System.Windows.Forms.TextBox
-$argBox.Location = New-Object System.Drawing.Point(20,140)
-$argBox.Width = 620
-$modeForm.Controls.Add($argBox)
+    $tbl = New-Object System.Windows.Forms.TableLayoutPanel
+    $tbl.Dock = 'Fill'; $tbl.RowCount = 6; $tbl.ColumnCount = 1; $tbl.AutoSize = $true
 
-$ok = New-Object System.Windows.Forms.Button
-$ok.Text = "OK"
-$ok.Location = New-Object System.Drawing.Point(560,180)
-$ok.Add_Click({ $modeForm.Tag = "ok"; $modeForm.Close() })
-$modeForm.Controls.Add($ok)
+    $rb1 = New-Object System.Windows.Forms.RadioButton; $rb1.Text = "1) Fast install / upgrade (no registry edits)"; $rb1.Checked = $true; $rb1.AutoSize = $true
+    $rb2 = New-Object System.Windows.Forms.RadioButton; $rb2.Text = "2) Advanced install (apply bypass registry keys)"; $rb2.AutoSize = $true
+    $rb3 = New-Object System.Windows.Forms.RadioButton; $rb3.Text = "3) Reset registry keys to original (remove bypass)"; $rb3.AutoSize = $true
 
-$modeForm.Topmost = $true
-$modeForm.ShowDialog() | Out-Null
-if ($modeForm.Tag -ne "ok") { exit }
+    $tbl.Controls.Add($rb1); $tbl.Controls.Add($rb2); $tbl.Controls.Add($rb3)
 
-$selectedMode = if ($rb2.Checked) { "advanced" } elseif ($rb3.Checked) { "reset" } else { "fast" }
-$extraArgs = $argBox.Text.Trim()
-Log "Mode: $selectedMode"
-if ($extraArgs) { Log "Extra args: $extraArgs" }
+    $argLabel = New-Object System.Windows.Forms.Label
+    $argLabel.Text = "Extra installer args (optional, e.g. /Compat IgnoreWarning)"
+    $argLabel.AutoSize = $true
+    $tbl.Controls.Add($argLabel)
 
-# --- ISO Picker ---
-$ofd = New-Object System.Windows.Forms.OpenFileDialog
-$ofd.Filter = "ISO files (*.iso)|*.iso"
-$ofd.Title = "Select Windows 11 25H2 ISO"
-if ($ofd.ShowDialog() -ne [System.Windows.Forms.DialogResult]::OK) { exit }
-$isoPath = $ofd.FileName
-$isoName = [System.IO.Path]::GetFileNameWithoutExtension($isoPath)
-$dest = Join-Path $desktop $isoName
-if (-not (Test-Path $dest)) { New-Item -Path $dest -ItemType Directory | Out-Null }
-Log "ISO selected: $isoPath"
-Log "Destination: $dest"
+    $argBox = New-Object System.Windows.Forms.TextBox
+    $argBox.Width = 560
+    $tbl.Controls.Add($argBox)
 
-# --- Mount ISO ---
-$volBefore = Get-Volume
-Mount-DiskImage -ImagePath $isoPath -ErrorAction Stop
-Start-Sleep -Seconds 1
-$volAfter = Get-Volume
-$driveLetter = ($volAfter | Where-Object { $volBefore.DriveLetter -notcontains $_.DriveLetter -and $_.DriveLetter }).DriveLetter
-if (-not $driveLetter) {
-    $cd = Get-Volume | Where-Object DriveType -eq 'CDROM' | Select-Object -First 1
-    $driveLetter = $cd.DriveLetter
+    $ok = New-Object System.Windows.Forms.Button
+    $ok.Text = "OK"; $ok.Width = 100; $ok.DialogResult = [System.Windows.Forms.DialogResult]::OK
+    $tbl.Controls.Add($ok)
+
+    $modeForm.Controls.Add($tbl)
+    $modeForm.AcceptButton = $ok
+    $modeForm.Topmost = $true
+    $modeRes = $modeForm.ShowDialog()
+    if ($modeRes -ne [System.Windows.Forms.DialogResult]::OK) { throw "User cancelled at mode selection." }
+
+    $selectedMode = if ($rb2.Checked) { "advanced" } elseif ($rb3.Checked) { "reset" } else { "fast" }
+    $extraArgs = $argBox.Text.Trim()
+    Log "Mode: $selectedMode"
+    if ($extraArgs) { Log "Extra args: $extraArgs" }
+
+    # ---- ISO picker ----
+    $ofd = New-Object System.Windows.Forms.OpenFileDialog
+    $ofd.Filter = "ISO files (*.iso)|*.iso"
+    $ofd.Title  = "Select Windows 11 25H2 ISO"
+    if ($ofd.ShowDialog() -ne [System.Windows.Forms.DialogResult]::OK) { throw "User cancelled ISO picker." }
+    $isoPath = $ofd.FileName
+    $isoName = [System.IO.Path]::GetFileNameWithoutExtension($isoPath)
+    $dest    = Join-Path $desktop $isoName
+    if (-not (Test-Path $dest)) { New-Item -Path $dest -ItemType Directory | Out-Null }
+    Log "ISO selected: $isoPath"
+    Log "Destination: $dest"
+
+    # ---- Mount ISO (robust, with wait) ----
+    Log "Mounting ISO..."
+    $disk = Mount-DiskImage -ImagePath $isoPath -PassThru -ErrorAction Stop
+
+    $drive = $null
+    for ($i = 0; $i -lt 60; $i++) {
+        try {
+            $disk = Get-DiskImage -ImagePath $isoPath -ErrorAction Stop
+            if ($disk.Attached) {
+                $vol = Get-Volume -DiskImage $disk -ErrorAction SilentlyContinue | Where-Object DriveLetter
+                if ($vol -and $vol.DriveLetter) {
+                    $drive = "$($vol.DriveLetter):"
+                    if (Test-Path "$drive\") { break }
+                }
+            }
+        } catch { }
+        Start-Sleep -Seconds 1
+    }
+    if (-not $drive -or -not (Test-Path "$drive\")) {
+        throw "ISO mount did not expose a drive letter in time. Attached=$($disk.Attached)."
+    }
+    Log "Mounted at $drive"
+
+    # ---- Progress UI ----
+    $progForm = New-Object System.Windows.Forms.Form
+    $progForm.Text = "Extracting files..."
+    $progForm.Width = 520; $progForm.Height = 140; $progForm.StartPosition = "CenterScreen"
+
+    $bar = New-Object System.Windows.Forms.ProgressBar
+    $bar.Location = New-Object System.Drawing.Point(10,20); $bar.Width = 480
+    $bar.Minimum = 0; $bar.Maximum = 100
+    $progForm.Controls.Add($bar)
+
+    $lblProg = New-Object System.Windows.Forms.Label
+    $lblProg.Location = New-Object System.Drawing.Point(10,60); $lblProg.AutoSize = $true; $lblProg.Text = "Preparing..."
+    $progForm.Controls.Add($lblProg)
+    $progForm.Topmost = $true; $progForm.Show()
+
+    $totalFiles = (Get-ChildItem -Path "$drive\" -Recurse -Force | Where-Object { -not $_.PSIsContainer }).Count
+    if ($totalFiles -eq 0) { $totalFiles = 1 }
+
+    # Readiness wait: require setup.exe and stable file count (3 checks)
+    $stableReads = 0
+    $prevCount   = -1
+    for ($i = 0; $i -lt 60 -and $stableReads -lt 3; $i++) {
+        try {
+            if (Test-Path "$drive\sources\setup.exe") {
+                $count = (Get-ChildItem -Path "$drive\" -Recurse -Force -ErrorAction Stop |
+                          Where-Object { -not $_.PSIsContainer }).Count
+                if ($count -eq $prevCount) { $stableReads++ } else { $stableReads = 0; $prevCount = $count }
+            }
+        } catch { $stableReads = 0 }
+        Start-Sleep -Milliseconds 500
+    }
+
+    # Warm-up: touch the root to ensure readability
+    for ($warm = 1; $warm -le 10; $warm++) {
+        try {
+            if (Test-Path "$drive\" -PathType Container) {
+                Get-ChildItem -Path "$drive\" -ErrorAction Stop | Out-Null
+                break
+            }
+        } catch { }
+        Start-Sleep -Milliseconds 300
+    }
+
+    # ---- Robocopy with one retry before fallback (friendly wording) ----
+    $maxTries = 2
+    $rc = 99
+    $usedFallback = $false
+
+    for ($try = 1; $try -le $maxTries; $try++) {
+        if (-not $QuietCopyLogs) { Log "Robocopy attempt $try of $maxTries..." }
+        $lblProg.Text = "Extracting... (preparing files)"
+        $robArgs = @("`"$drive\`"","`"$dest\`"","/MIR","/R:2","/W:2","/NFL","/NDL","/NJH","/NJS")
+        $proc = Start-Process -FilePath "robocopy.exe" -ArgumentList $robArgs -PassThru -WindowStyle Hidden
+
+        while (-not $proc.HasExited) {
+            $done = (Get-ChildItem -Path $dest -Recurse -Force | Where-Object { -not $_.PSIsContainer }).Count
+            $percent = [Math]::Min(100,[Math]::Round(($done/$totalFiles)*100))
+            $bar.Value = $percent
+            $lblProg.Text = "Extracting... $percent% complete"
+            [System.Windows.Forms.Application]::DoEvents()
+            Start-Sleep -Milliseconds 500
+        }
+
+        $rc = $proc.ExitCode
+        if ($rc -le 7) {
+            if (-not $QuietCopyLogs) { Log "Robocopy completed (code $rc)." }
+            break
+        } else {
+            if (-not $QuietCopyLogs) { Log "Robocopy reported code $rc; will retry if needed." }
+            if ($try -lt $maxTries) { Start-Sleep -Seconds 2 }
+        }
+    }
+
+    if ($rc -gt 7) {
+        $usedFallback = $true
+        $lblProg.Text = "Extracting (direct copy)..."
+        Log "Switching method: using direct Copy-Item..."
+        Copy-Item -Path "$drive\*" -Destination $dest -Recurse -Force -ErrorAction Stop
+    }
+
+    $progForm.Close()
+
+    # Dismount ISO now
+    try { Dismount-DiskImage -ImagePath $isoPath -ErrorAction SilentlyContinue } catch {}
+
+    # Verify setup files exist
+    $sourcesPath = Join-Path $dest "sources"
+    $setupPrep = Join-Path $sourcesPath "setupprep.exe"
+    $setupExe  = Join-Path $sourcesPath "setup.exe"
+    if (-not (Test-Path $setupPrep) -and -not (Test-Path $setupExe)) {
+        throw "Extraction incomplete. 'sources' folder or setup files not found at: $sourcesPath"
+    }
+
+    if ($usedFallback) {
+        Log "Copy finished successfully via direct copy to $dest"
+    } else {
+        Log "Copy finished successfully via Robocopy to $dest"
+    }
+
+    # ---- Registry helpers ----
+    function Apply-Bypass {
+        Log "Applying bypass keys..."
+        New-Item -Path "HKLM:\SYSTEM\Setup\LabConfig" -Force | Out-Null
+        Set-ItemProperty "HKLM:\SYSTEM\Setup\LabConfig" -Name "BypassTPMCheck"        -Value 1 -Type DWord
+        Set-ItemProperty "HKLM:\SYSTEM\Setup\LabConfig" -Name "BypassSecureBootCheck" -Value 1 -Type DWord
+        Set-ItemProperty "HKLM:\SYSTEM\Setup\LabConfig" -Name "BypassRAMCheck"        -Value 1 -Type DWord
+        Set-ItemProperty "HKLM:\SYSTEM\Setup\LabConfig" -Name "BypassCPUCheck"        -Value 1 -Type DWord
+        New-Item -Path "HKLM:\SYSTEM\Setup\MoSetup" -Force | Out-Null
+        Set-ItemProperty "HKLM:\SYSTEM\Setup\MoSetup" -Name "AllowUpgradesWithUnsupportedTPMOrCPU" -Value 1 -Type DWord
+    }
+    function Reset-Bypass {
+        Log "Resetting keys..."
+        Remove-Item -Path "HKLM:\SYSTEM\Setup\LabConfig" -Recurse -Force -ErrorAction SilentlyContinue
+        try { Remove-ItemProperty -Path "HKLM:\SYSTEM\Setup\MoSetup" -Name "AllowUpgradesWithUnsupportedTPMOrCPU" -ErrorAction SilentlyContinue } catch {}
+    }
+
+    switch ($selectedMode) {
+        "advanced" { Apply-Bypass }
+        "reset"    { Reset-Bypass; [System.Windows.Forms.MessageBox]::Show("Registry reset completed.","Tips2Fix",[System.Windows.Forms.MessageBoxButtons]::OK) | Out-Null; exit }
+        default    { }
+    }
+
+    # ---- Launch Windows Setup (non-blocking), then 5s later show message + open subscribe in NEW browser window ----
+    if (Test-Path $setupPrep) { $exe = $setupPrep } else { $exe = $setupExe }
+    $args = "/product server"
+    if ($extraArgs) { $args = "$args $extraArgs" }
+
+    Log "Launching: $exe $args"
+    Start-Process -FilePath $exe -ArgumentList $args -Verb RunAs  # do NOT wait
+
+    Start-Sleep -Seconds 5  # give Setup time to appear
+
+    [System.Windows.Forms.MessageBox]::Show(
+        "Enjoy Windows 11 25H2!`nThanks for using Tips2Fix. We’ll open the Subscribe page now.",
+        "Done - Tips2Fix",
+        [System.Windows.Forms.MessageBoxButtons]::OK,
+        [System.Windows.Forms.MessageBoxIcon]::Information
+    ) | Out-Null
+
+    try {
+        Open-Url-NewWindow -Url $SubscribeUrl
+        Log "Opened subscribe link in a new browser window."
+    } catch {
+        Log "Could not open browser: $_"
+    }
+
+    Log "Finished. Duration: $((Get-Date) - $scriptStart)"
 }
-$driveLetter = "$driveLetter:"
-Log "Mounted at $driveLetter"
-
-# --- Live Progress Copy ---
-$totalFiles = (Get-ChildItem -Path "$driveLetter\" -Recurse -Force | ? { -not $_.PSIsContainer }).Count
-if ($totalFiles -eq 0) { $totalFiles = 1 }
-
-$progForm = New-Object System.Windows.Forms.Form
-$progForm.Text = "Copying ISO files..."
-$progForm.Width = 500
-$progForm.Height = 120
-$bar = New-Object System.Windows.Forms.ProgressBar
-$bar.Location = New-Object System.Drawing.Point(10,20)
-$bar.Width = 460
-$bar.Minimum = 0; $bar.Maximum = 100
-$progForm.Controls.Add($bar)
-$lblProg = New-Object System.Windows.Forms.Label
-$lblProg.Location = New-Object System.Drawing.Point(10,60)
-$lblProg.AutoSize = $true
-$lblProg.Text = "Starting copy..."
-$progForm.Controls.Add($lblProg)
-$progForm.Topmost = $true
-$progForm.Show()
-
-$robocmd = "robocopy ""$driveLetter\ """"$dest\ "" /MIR /R:3 /W:5 /NJH /NJS /NP"
-$proc = Start-Process -FilePath "cmd.exe" -ArgumentList "/c $robocmd" -WindowStyle Hidden -PassThru
-
-while (-not $proc.HasExited) {
-    $done = (Get-ChildItem -Path $dest -Recurse -Force | ? { -not $_.PSIsContainer }).Count
-    $percent = [Math]::Min(100,[Math]::Round(($done/$totalFiles)*100))
-    $bar.Value = $percent
-    $lblProg.Text = "Copying... $percent% complete"
-    [System.Windows.Forms.Application]::DoEvents()
-    Start-Sleep -Milliseconds 500
+catch {
+    Log "ERROR: $_"
+    try {
+        [System.Windows.Forms.MessageBox]::Show(
+            "An error occurred:`n$_`nCheck the log at:`n$logPath",
+            "Tips2Fix Error",
+            [System.Windows.Forms.MessageBoxButtons]::OK,
+            [System.Windows.Forms.MessageBoxIcon]::Error
+        ) | Out-Null
+    } catch { Write-Host "Could not show message box: $_" }
 }
-$progForm.Close()
-Dismount-DiskImage -ImagePath $isoPath -ErrorAction SilentlyContinue
-Log "Copy finished."
-
-# --- Registry functions ---
-function Apply-Bypass {
-    Log "Applying bypass keys..."
-    New-Item -Path "HKLM:\SYSTEM\Setup\LabConfig" -Force | Out-Null
-    Set-ItemProperty "HKLM:\SYSTEM\Setup\LabConfig" -Name "BypassTPMCheck" -Value 1 -Type DWord
-    Set-ItemProperty "HKLM:\SYSTEM\Setup\LabConfig" -Name "BypassSecureBootCheck" -Value 1 -Type DWord
-    Set-ItemProperty "HKLM:\SYSTEM\Setup\LabConfig" -Name "BypassRAMCheck" -Value 1 -Type DWord
-    Set-ItemProperty "HKLM:\SYSTEM\Setup\LabConfig" -Name "BypassCPUCheck" -Value 1 -Type DWord
-    New-Item -Path "HKLM:\SYSTEM\Setup\MoSetup" -Force | Out-Null
-    Set-ItemProperty "HKLM:\SYSTEM\Setup\MoSetup" -Name "AllowUpgradesWithUnsupportedTPMOrCPU" -Value 1 -Type DWord
+finally {
+    Read-Host "Script finished. Press Enter to close this window..."
 }
-function Reset-Bypass {
-    Log "Resetting keys..."
-    Remove-Item -Path "HKLM:\SYSTEM\Setup\LabConfig" -Recurse -Force -ErrorAction SilentlyContinue
-    try { Remove-ItemProperty -Path "HKLM:\SYSTEM\Setup\MoSetup" -Name "AllowUpgradesWithUnsupportedTPMOrCPU" -ErrorAction SilentlyContinue } catch {}
-}
-
-switch ($selectedMode) {
-    "advanced" { Apply-Bypass }
-    "reset" { Reset-Bypass; [System.Windows.Forms.MessageBox]::Show("Registry reset complete.","Tips2Fix",[System.Windows.Forms.MessageBoxButtons]::OK); exit }
-}
-
-# --- Run installer ---
-$sources = Join-Path $dest "sources"
-$exe = if (Test-Path (Join-Path $sources "setupprep.exe")) { Join-Path $sources "setupprep.exe" } else { Join-Path $sources "setup.exe" }
-$args = "/product server"
-if ($extraArgs) { $args = "$args $extraArgs" }
-
-Log "Launching $exe $args"
-Start-Process -FilePath $exe -ArgumentList $args -Verb RunAs -Wait
-
-# --- Final message ---
-$msg = "Enjoy Windows 11 25H2!`nDon't forget to subscribe to Tips2Fix.`n(Unsupported hardware installs are at your own risk)."
-[System.Windows.Forms.MessageBox]::Show($msg,"Done — Tips2Fix",[System.Windows.Forms.MessageBoxButtons]::OK,[System.Windows.Forms.MessageBoxIcon]::Information) | Out-Null
-Log "Finished. Duration: $((Get-Date)-$ScriptStart)"
