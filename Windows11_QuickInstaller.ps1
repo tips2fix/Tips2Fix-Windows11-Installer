@@ -239,6 +239,7 @@ function Show-CPUCheckDialog {
     return $form.ShowDialog()
 }
 
+
 try {
     # ---- Intro ----
     $form = New-Object System.Windows.Forms.Form
