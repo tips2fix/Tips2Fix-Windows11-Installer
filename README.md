@@ -37,3 +37,6 @@ If this script helped, don’t forget to subscribe:
 
 ![GitHub release (latest)](https://img.shields.io/github/v/release/tips2fix/Tips2Fix-Windows11-Installer)
 ![GitHub repo size](https://img.shields.io/github/repo-size/tips2fix/Tips2Fix-Windows11-Installer)
+![Untitled-1](https://github.com/user-attachments/assets/3f6a878b-5ea8-49a1-ac49-669fd2cf2d13)
+![Untitled-2](https://github.com/user-attachments/assets/b850c62d-3ee5-4a5e-9837-8e47792813e8)
+![Untitled-3](https://github.com/user-attachments/assets/840bf127-617d-4d2a-a468-9dd35ed07c0b)
