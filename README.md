@@ -30,6 +30,21 @@ Created by **Tips2Fix** in collaboration with ChatGPT.
 - Use at your own risk. Always back up your files first.
 - Unsupported installs may not receive all updates.
 
+
+## What the script does not do
+❌ Does not download or modify your ISO.
+❌ Does not install drivers or change bootloaders.
+❌ Does not collect data or phone home.
+❌ Does not force install — you still control Windows Setup.
+
+
+🛡️ Antivirus Note
+
+Some antivirus programs may flag this tool as a virus or trojan, but that’s a false positive ⚠️.
+Why? Because the installer is a PowerShell script inside a .bat wrapper, and antiviruses sometimes flag scripts that interact with setup files.
+
+👉 Rest assured, it’s 100% safe. If your AV blocks it, just temporarily disable protection or add an exclusion.
+
 ## Subscribe ❤️
 If this script helped, don’t forget to subscribe:  
 👉 [Tips2Fix YouTube Channel](https://youtube.com/@tips2fix)
