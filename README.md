@@ -1,4 +1,5 @@
-# Tips2Fix Windows 11 25H2 Installer — Safe Confirmed Edition ✅
+# 🚀 Tips2Fix Windows 11 25H2 Installer 
+# Safe Confirmed Edition ✅
 
 A friendly, consent‑driven helper to launch the **Windows 11 25H2** setup on unsupported PCs — with clear UI, live progress, and **antivirus‑friendly** behavior.  
 Built by **Tips2Fix** in collaboration with **ChatGPT** (Tips2Fix Project).
@@ -158,22 +159,4 @@ Compare the hashes with the published values (if you distribute releases).
 - **Tips2Fix** — author & maintainer.  
 - **ChatGPT** — collaborator on UI polish and safety flow wording.
 
----
 
-## 📝 License
-
-Choose the license that matches how you want others to use this tool.  
-Common choices: **MIT**, **Apache-2.0**, or **All Rights Reserved** (closed).
-
-> If you need a ready‑to‑use `LICENSE` file (MIT/Apache), ask and we’ll add it.
-
----
-
-## 🗒 Release Notes (example)
-
-- **v1.0.0** — Initial Safe Confirmed Edition: 3 modes, progress UI, consent prompts, AV‑friendly launcher.
-
----
-
-## Screenshots (optional)
-If you’d like, add screenshots of the mode picker, extraction progress, and success dialog here.
