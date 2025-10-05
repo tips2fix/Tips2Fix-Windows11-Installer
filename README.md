@@ -1,57 +1,179 @@
-# Tips2Fix Windows 11 25H2 Installer 🚀
+# Tips2Fix Windows 11 25H2 Installer — Safe Confirmed Edition ✅
 
-A simple script to install **Windows 11 25H2** on unsupported PCs.  
-Created by **Tips2Fix** in collaboration with ChatGPT.
+A friendly, consent‑driven helper to launch the **Windows 11 25H2** setup on unsupported PCs — with clear UI, live progress, and **antivirus‑friendly** behavior.  
+Built by **Tips2Fix** in collaboration with **ChatGPT** (Tips2Fix Project).
 
-## Features
-- Fast install (no registry edits)
-- Advanced install (auto-bypass TPM, Secure Boot, RAM, CPU checks)
-- Reset mode (restore registry keys to default)
-- Live progress bar while copying ISO files
-- Final subscribe message 😉
+---
 
-## How to use
-1. Download the repo and unzip.
-2. Double-click `Run-Installer.bat` (it will run as Administrator).
-3. Select your Windows 11 25H2 ISO.
-4. Choose install mode:
-   - Fast
-   - Advanced (recommended for unsupported PCs)
-   - Reset (remove bypass keys)
-5. The script copies ISO → Desktop, applies registry bypass if chosen, and launches the Windows installer.
+## ✨ Highlights
 
-## Requirements
-- Windows 10 or higher
-- PowerShell 5.1+
-- Administrator rights
+- **Three modes**:  
+  1) **Fast** – no registry changes.  
+  2) **Advanced** – applies *only on consent* the well‑known LabConfig/MoSetup keys (TPM / CPU / RAM / Secure Boot bypass).  
+  3) **Reset** – removes those keys and restores defaults.
+- **ISO → Desktop extraction** with a **live progress bar** (no obfuscation, no hidden windows).
+- **User consent for everything** (extraction, registry edits, setup start, optional YouTube open).
+- **Clear logs** written to your Desktop: `Tips2Fix_W11_install_log.txt`.
+- **No persistence, no background tasks, no network calls** (except optional YouTube, on consent).
 
-## Notes
-- This script is not officially supported by Microsoft.
-- Use at your own risk. Always back up your files first.
-- Unsupported installs may not receive all updates.
+> This project keeps the original UI layout (orange title & footer) you saw in the video, so users won’t be surprised by a different interface.
 
+---
 
-## What the script does not do
-❌ Does not download or modify your ISO.
-❌ Does not install drivers or change bootloaders.
-❌ Does not collect data or phone home.
-❌ Does not force install — you still control Windows Setup.
+## 📦 What’s in this folder
 
+- `Run-Installer.bat` — launcher that elevates if needed and starts the PowerShell script.  
+- `Windows11_QuickInstaller.ps1` — the main guided installer (WinForms UI).  
+- `README.md` — this file.
 
-🛡️ Antivirus Note
+> Keep both `.bat` and `.ps1` in the **same folder**.
 
-Some antivirus programs may flag this tool as a virus or trojan, but that’s a false positive ⚠️.
-Why? Because the installer is a PowerShell script inside a .bat wrapper, and antiviruses sometimes flag scripts that interact with setup files.
+---
 
-👉 Rest assured, it’s 100% safe. If your AV blocks it, just temporarily disable protection or add an exclusion.
+## 🖥 Requirements
 
-## Subscribe ❤️
-If this script helped, don’t forget to subscribe:  
-👉 [Tips2Fix YouTube Channel](https://youtube.com/@tips2fix)
+- Windows 10 or later
+- Administrator rights (UAC prompt will appear)
+- Windows PowerShell **5.1** (built-in on Windows 10+)
+- A **Windows 11 25H2 ISO** file
 
+> Recommended: a good backup before you start. Installing on unsupported hardware is at your own risk.
 
-![GitHub release (latest)](https://img.shields.io/github/v/release/tips2fix/Tips2Fix-Windows11-Installer)
-![GitHub repo size](https://img.shields.io/github/repo-size/tips2fix/Tips2Fix-Windows11-Installer)
-![Untitled-1](https://github.com/user-attachments/assets/3f6a878b-5ea8-49a1-ac49-669fd2cf2d13)
-![Untitled-2](https://github.com/user-attachments/assets/b850c62d-3ee5-4a5e-9837-8e47792813e8)
-![Untitled-3](https://github.com/user-attachments/assets/840bf127-617d-4d2a-a468-9dd35ed07c0b)
+---
+
+## 🚀 Quick Start
+
+1. **Download** this folder (or clone) and unzip it somewhere local.  
+2. **Right‑click** `Run-Installer.bat` → **Run as administrator**.  
+3. Pick your **Windows 11 25H2 ISO**.  
+4. Choose mode: **Fast**, **Advanced**, or **Reset**.  
+5. Confirm extraction location (defaults to **Desktop\\\<ISO name>**).  
+6. After extraction, confirm **Start Setup**.  
+7. (Optional) After launch, you may be asked whether to open the **Tips2Fix YouTube** channel.
+
+When Windows installation is completely finished, you can **safely delete** the extracted folder from your Desktop.
+
+---
+
+## 🧭 Modes explained
+
+### 1) Fast (no registry edits)
+- Extracts ISO to `Desktop\<ISO name>`.
+- Launches the official **Windows Setup** from the extracted files.
+- Good for supported or near‑supported hardware.
+
+### 2) Advanced (apply bypass keys on consent)
+- Creates these keys (DWORD = 1) to relax checks during setup:
+  - `HKLM\SYSTEM\Setup\LabConfig\BypassTPMCheck`
+  - `HKLM\SYSTEM\Setup\LabConfig\BypassSecureBootCheck`
+  - `HKLM\SYSTEM\Setup\LabConfig\BypassRAMCheck`
+  - `HKLM\SYSTEM\Setup\LabConfig\BypassCPUCheck`
+  - `HKLM\SYSTEM\Setup\MoSetup\AllowUpgradesWithUnsupportedTPMOrCPU`
+- Asks **before** applying anything.
+- You can run **Reset** later to remove them.
+
+### 3) Reset (restore defaults)
+- Deletes `HKLM\SYSTEM\Setup\LabConfig` (if present).  
+- Deletes the `AllowUpgradesWithUnsupportedTPMOrCPU` value under `HKLM\SYSTEM\Setup\MoSetup` (if present).
+
+> All registry operations are **visible and logged**; nothing is hidden.
+
+---
+
+## 🔐 Antivirus‑friendly design
+
+- **Consent‑first**: every sensitive step has a clear **Yes/No** prompt.  
+- **No obfuscation or encoded commands**; no AMSI tampering; no persistence.  
+- **Local file operations only** (ISO mount + copy), using standard Windows tools.  
+- **Optional** network action (open YouTube) only **after** user confirmation.  
+- **Logging** to a visible Desktop text file.
+- Supports running with Execution Policy **RemoteSigned** or **AllSigned** for best results (see below).
+
+### Code signing & Execution Policy (recommended)
+
+- If you can **code‑sign** the PS1, the BAT will happily run under `AllSigned` (most AV‑friendly).  
+- If unsigned, the launcher can **prompt to Unblock** the PS1 so it can run under `RemoteSigned`.  
+- You can also run with `Bypass`, but some AVs score that higher heuristically.
+
+---
+
+## 🧰 How it works (technical)
+
+- **Elevation**: via UAC on demand; the BAT/PS1 do not force elevation silently.  
+- **ISO**: mounted via `Mount-DiskImage`.  
+- **Extraction**: deterministic `Copy-Item` with a **live progress bar** (WinForms).  
+- **Setup**: prefers `sources\setupprep.exe`, falling back to `setup.exe`.  
+- **Arguments**: launches with `/product server` to allow the GUI install flow.  
+- **Logs**: `Desktop\Tips2Fix_W11_install_log.txt` with timestamps.
+
+---
+
+## 🧪 Troubleshooting
+
+**Mount failed or no drive letter appears**  
+- Wait ~5–10 seconds; external drives can be slow to enumerate.  
+- Ensure the ISO opens normally by double‑clicking in File Explorer.  
+- Some 3rd‑party virtual‑drive tools can interfere — try disabling them.
+
+**Extraction seems stuck or very slow**  
+- Large ISOs on slow HDDs can take time; the progress bar uses real file counts.  
+- Make sure you have enough free space on Desktop (same drive as `%USERPROFILE%`).
+
+**“Setup files not found” after extraction**  
+- Check that `Desktop\<ISO name>\sources\setupprep.exe` (or `setup.exe`) exists.  
+- If your ISO is modified/trimmed, mount it again and verify its structure.
+
+**Registry bypass didn’t stick**  
+- You may have chosen **Fast** mode. Run the tool again and select **Advanced**.  
+- Corporate policies can lock those keys; try again as full Admin.
+
+**SmartScreen/AV warning**  
+- Prefer **signed** scripts and run under `AllSigned`/`RemoteSigned` (no Bypass).  
+- Keep files unmodified after signing (changing file contents invalidates the signature).
+
+---
+
+## 🔍 Verify downloads (optional but recommended)
+
+You can compute a checksum after download:
+
+```powershell
+Get-FileHash .\Windows11_QuickInstaller.ps1 -Algorithm SHA256
+Get-FileHash .\Run-Installer.bat -Algorithm SHA256
+```
+
+Compare the hashes with the published values (if you distribute releases).
+
+---
+
+## 🔒 Privacy
+
+- The tool does **not** collect or transmit personal data.  
+- No telemetry, analytics, or background services.
+
+---
+
+## 🙌 Credits
+
+- **Tips2Fix** — author & maintainer.  
+- **ChatGPT** — collaborator on UI polish and safety flow wording.
+
+---
+
+## 📝 License
+
+Choose the license that matches how you want others to use this tool.  
+Common choices: **MIT**, **Apache-2.0**, or **All Rights Reserved** (closed).
+
+> If you need a ready‑to‑use `LICENSE` file (MIT/Apache), ask and we’ll add it.
+
+---
+
+## 🗒 Release Notes (example)
+
+- **v1.0.0** — Initial Safe Confirmed Edition: 3 modes, progress UI, consent prompts, AV‑friendly launcher.
+
+---
+
+## Screenshots (optional)
+If you’d like, add screenshots of the mode picker, extraction progress, and success dialog here.
