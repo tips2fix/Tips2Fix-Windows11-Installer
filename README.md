@@ -30,6 +30,21 @@ Created by **Tips2Fix** in collaboration with ChatGPT.
 - Use at your own risk. Always back up your files first.
 - Unsupported installs may not receive all updates.
 
+
+## What the script does not do
+❌ Does not download or modify your ISO.
+❌ Does not install drivers or change bootloaders.
+❌ Does not collect data or phone home.
+❌ Does not force install — you still control Windows Setup.
+
+
+🛡️ Antivirus Note
+
+Some antivirus programs may flag this tool as a virus or trojan, but that’s a false positive ⚠️.
+Why? Because the installer is a PowerShell script inside a .bat wrapper, and antiviruses sometimes flag scripts that interact with setup files.
+
+👉 Rest assured, it’s 100% safe. If your AV blocks it, just temporarily disable protection or add an exclusion.
+
 ## Subscribe ❤️
 If this script helped, don’t forget to subscribe:  
 👉 [Tips2Fix YouTube Channel](https://youtube.com/@tips2fix)
@@ -37,3 +52,6 @@ If this script helped, don’t forget to subscribe:
 
 ![GitHub release (latest)](https://img.shields.io/github/v/release/tips2fix/Tips2Fix-Windows11-Installer)
 ![GitHub repo size](https://img.shields.io/github/repo-size/tips2fix/Tips2Fix-Windows11-Installer)
+![Untitled-1](https://github.com/user-attachments/assets/3f6a878b-5ea8-49a1-ac49-669fd2cf2d13)
+![Untitled-2](https://github.com/user-attachments/assets/b850c62d-3ee5-4a5e-9837-8e47792813e8)
+![Untitled-3](https://github.com/user-attachments/assets/840bf127-617d-4d2a-a468-9dd35ed07c0b)
