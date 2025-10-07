@@ -149,30 +149,6 @@ Compare the hashes with the published values (if you distribute releases).
 - **Tips2Fix** — author & maintainer.  
 - **ChatGPT** — collaborator on UI polish and safety flow wording.
 
-
-<p align="center">
-  <img src="https://raw.githubusercontent.com/yourusername/Tips2Fix/main/logo.png" width="160" alt="Tips2Fix Logo"/>
-</p>
-
-<h1 align="center">💻 Tips2Fix Windows 11 25H2 Installer</h1>
-
-<p align="center">
-  A clean, safe and user-friendly PowerShell installer that lets you upgrade or install Windows 11 25H2 
-  on <b>any PC</b> — even unsupported ones — with full transparency and no hacks.
-</p>
-
----
-
-## ⚙️ Overview
-
-**Tips2Fix Windows 11 25H2 Installer** is a lightweight and open-source tool designed to help you:
-- ✅ Install or upgrade to **Windows 11 25H2** on unsupported CPUs, no TPM, no Secure Boot.
-- 💾 Run directly from your Desktop — no setup, no background services.
-- 🧩 Choose between **Fast**, **Advanced**, or **Reset** install modes.
-- 🪟 Built in **PowerShell + WinForms** with a modern orange-accent UI.
-
-Everything happens locally, with user consent at each step — **no obfuscation, no hidden tasks, no telemetry**.
-
 ---
 
 ## 🚀 Download the Installer Zip
