@@ -13,7 +13,7 @@ set "FULLPATH=%~dp0%SCRIPT%"
 set "RAW_URL=https://raw.githubusercontent.com/tips2fix/Tips2Fix-Windows11-Installer/main/Windows11_QuickInstaller.ps1"
 
 echo.
-echo Tips2Fix Windows 11 25H2 Installer v1.0.3
+echo Tips2Fix Windows 11 25H2 Installer v1.0.2
 echo ------------------------------------------
 echo.
 
