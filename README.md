@@ -28,7 +28,6 @@ Built by **Tips2Fix** in collaboration with **ChatGPT** (Tips2Fix Project).
 > Keep both `.bat` and `.ps1` in the **same folder**.
 
 ---
-
 ## 🖥 Requirements
 
 - Windows 10 or later
@@ -158,6 +157,7 @@ Compare the hashes with the published values (if you distribute releases).
 | 🟢 **v1.0.2** | 2025-10-07 | [⬇️ Download ZIP](https://github.com/tips2fix/Tips2Fix-Windows11-Installer/releases/download/1.0.2/Tips2Fix-Windows11-Installer-1.0.2.zip) |
 | 🟠 **v1.0.1** | 2025-10-06 | [⬇️ Download ZIP](https://github.com/tips2fix/Tips2Fix-Windows11-Installer/releases/download/1.0.1/Tips2Fix-Windows11-Installer-1.0.1.zip) |
 | ⚪ **v1.0.0** | 2025-10-05 | [⬇️ Download ZIP](https://github.com/tips2fix/Tips2Fix-Windows11-Installer/releases/download/1.0.1/Tips2Fix-Windows11-Installer.zip) |
+
 
 
 
