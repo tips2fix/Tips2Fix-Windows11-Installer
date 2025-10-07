@@ -184,16 +184,6 @@ Everything happens locally, with user consent at each step — **no obfuscation,
 | ⚪ **v1.0.0** | 2025-10-05 | [⬇️ Download ZIP](https://github.com/tips2fix/Tips2Fix-Windows11-Installer/releases/download/1.0.1/Tips2Fix-Windows11-Installer.zip) |
 
 
----
-## 🧾 Changelogs
-
-| Version | Release Notes |
-|----------|----------------|
-| **1.0.2** | [View changelog](https://github.com/tips2fix/Tips2Fix-Windows11-Installer/releases/tag/1.0.2) |
-| **1.0.1** | [View changelog](https://github.com/tips2fix/Tips2Fix-Windows11-Installer/releases/tag/1.0.1) |
-| **1.0.0** | [View changelog](https://github.com/tips2fix/Tips2Fix-Windows11-Installer/releases/tag/1.0.1) |
-
-
 
 
 
