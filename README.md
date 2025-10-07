@@ -5,7 +5,6 @@ A friendly, consent‑driven helper to launch the **Windows 11 25H2** setup on u
 Built by **Tips2Fix** in collaboration with **ChatGPT** (Tips2Fix Project).
 
 ---
-
 ## ✨ Highlights
 
 - **Three modes**:  
@@ -20,7 +19,6 @@ Built by **Tips2Fix** in collaboration with **ChatGPT** (Tips2Fix Project).
 > This project keeps the original UI layout (orange title & footer) you saw in the video, so users won’t be surprised by a different interface.
 
 ---
-
 ## 📦 What’s in this folder
 
 - `Run-Installer.bat` — launcher that elevates if needed and starts the PowerShell script.  
@@ -41,7 +39,6 @@ Built by **Tips2Fix** in collaboration with **ChatGPT** (Tips2Fix Project).
 > Recommended: a good backup before you start. Installing on unsupported hardware is at your own risk.
 
 ---
-
 ## 🚀 Quick Start
 
 1. **Download** this folder (or clone) and unzip it somewhere local.  
@@ -55,7 +52,6 @@ Built by **Tips2Fix** in collaboration with **ChatGPT** (Tips2Fix Project).
 When Windows installation is completely finished, you can **safely delete** the extracted folder from your Desktop.
 
 ---
-
 ## 🧭 Modes explained
 
 ### 1) Fast (no registry edits)
@@ -80,7 +76,6 @@ When Windows installation is completely finished, you can **safely delete** the 
 > All registry operations are **visible and logged**; nothing is hidden.
 
 ---
-
 ## 🔐 Antivirus‑friendly design
 
 - **Consent‑first**: every sensitive step has a clear **Yes/No** prompt.  
@@ -97,7 +92,6 @@ When Windows installation is completely finished, you can **safely delete** the 
 - You can also run with `Bypass`, but some AVs score that higher heuristically.
 
 ---
-
 ## 🧰 How it works (technical)
 
 - **Elevation**: via UAC on demand; the BAT/PS1 do not force elevation silently.  
@@ -108,7 +102,6 @@ When Windows installation is completely finished, you can **safely delete** the 
 - **Logs**: `Desktop\Tips2Fix_W11_install_log.txt` with timestamps.
 
 ---
-
 ## 🧪 Troubleshooting
 
 **Mount failed or no drive letter appears**  
@@ -133,7 +126,6 @@ When Windows installation is completely finished, you can **safely delete** the 
 - Keep files unmodified after signing (changing file contents invalidates the signature).
 
 ---
-
 ## 🔍 Verify downloads (optional but recommended)
 
 You can compute a checksum after download:
@@ -146,17 +138,28 @@ Get-FileHash .\Run-Installer.bat -Algorithm SHA256
 Compare the hashes with the published values (if you distribute releases).
 
 ---
-
 ## 🔒 Privacy
 
 - The tool does **not** collect or transmit personal data.  
 - No telemetry, analytics, or background services.
 
 ---
-
 ## 🙌 Credits
 
 - **Tips2Fix** — author & maintainer.  
 - **ChatGPT** — collaborator on UI polish and safety flow wording.
+
+---
+
+## 🚀 Download the Installer Zip
+
+| Version | Release Date | Download |
+|----------|---------------|-----------|
+| 🟢 **v1.0.2** | 2025-10-07 | [⬇️ Download ZIP](https://github.com/tips2fix/Tips2Fix-Windows11-Installer/releases/download/1.0.2/Tips2Fix-Windows11-Installer-1.0.2.zip) |
+| 🟠 **v1.0.1** | 2025-10-06 | [⬇️ Download ZIP](https://github.com/tips2fix/Tips2Fix-Windows11-Installer/releases/download/1.0.1/Tips2Fix-Windows11-Installer-1.0.1.zip) |
+| ⚪ **v1.0.0** | 2025-10-05 | [⬇️ Download ZIP](https://github.com/tips2fix/Tips2Fix-Windows11-Installer/releases/download/1.0.1/Tips2Fix-Windows11-Installer.zip) |
+
+
+
 
 
