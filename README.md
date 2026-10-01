@@ -6,6 +6,27 @@ A guided tool for upgrading older PCs to Windows 11 26H2, including PCs that Mic
 
 Made and maintained by Tips2Fix.
 
+[![Latest release](https://img.shields.io/github/v/release/tips2fix/Tips2Fix-Windows11-Installer?label=release&color=f28c00)](https://github.com/tips2fix/Tips2Fix-Windows11-Installer/releases/latest)
+![Windows 10 and 11](https://img.shields.io/badge/Windows-10%20%7C%2011-0078d4)
+![Target 26H2](https://img.shields.io/badge/target-Windows%2011%2026H2-0078d4)
+![Asks before every change](https://img.shields.io/badge/asks%20before%20every%20change-yes-2e7d32)
+![License MIT](https://img.shields.io/badge/license-MIT-lightgrey)
+
+## A quick look
+
+<p align="center">
+  <img src="docs/images/1-welcome.png" width="46%" alt="Welcome screen with the backup warning">
+  &nbsp;
+  <img src="docs/images/3-choose.png" width="46%" alt="Choose how to upgrade">
+</p>
+<p align="center">
+  <img src="docs/images/2-your-system.png" width="46%" alt="Your system screen comparing the hardware with Windows 11's minimum">
+  &nbsp;
+  <img src="docs/images/4-fast-update.png" width="46%" alt="Fast update screen with the three steps">
+</p>
+
+The screenshots show example hardware (an older PC), so you can see how the tool explains what it skips.
+
 ## What's new in v1.2.0
 
 - **Keeps your files and apps.** The tool now sets the `HwReqChk` compatibility values. They are what keep "Keep personal files and apps" available during an upgrade. Earlier versions relied on `/product server`, which grays that option out, so Setup could only do a clean install.
