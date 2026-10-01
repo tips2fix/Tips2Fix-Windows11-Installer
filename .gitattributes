@@ -1,2 +1,7 @@
 # Auto detect text files and perform LF normalization
 * text=auto
+
+# cmd.exe parses batch files most reliably with CRLF line endings, so they are
+# checked out and exported (including GitHub's ZIP downloads) with CRLF.
+*.bat text eol=crlf
+*.cmd text eol=crlf
